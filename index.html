@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ceccato.ch</title>
+  <style>
+    /* Reset & base */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Arial', sans-serif;
+      overflow: hidden;
+      background: #000;
+      height: 100vh;
+      position: relative;
+    }
+
+    /* Space background */
+    .space-bg {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: linear-gradient(45deg, #0f0f23 0%, #1a1a3a 50%, #2d1b69 100%);
+      overflow: hidden;
+      will-change: transform;
+    }
+
+    /* Stars container for radial movement */
+    .stars {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      overflow: hidden;
+    }
+
+    /* Individual stars twinkle */
+    .star {
+      position: absolute;
+      background: white;
+      border-radius: 50%;
+      animation: twinkle 3s infinite ease-in-out;
+    }
+    .star:nth-child(odd) { animation-delay: 1.5s; }
+    @keyframes twinkle {
+      0%,100% { opacity: 0.3; transform: scale(1); }
+      50%     { opacity: 1;   transform: scale(1.2); }
+    }
+
+    /* Nebula clouds */
+    .nebula {
+      position: absolute;
+      width: 300px; height: 300px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(138,43,226,0.3) 0%, rgba(75,0,130,0.2) 40%, transparent 70%);
+      animation: float 20s infinite ease-in-out;
+    }
+    .nebula:nth-of-type(2) {
+      top: 60%; right: 20%;
+      background: radial-gradient(circle, rgba(255,20,147,0.3) 0%, rgba(139,69,19,0.2) 40%, transparent 70%);
+      animation-delay: -10s;
+    }
+    @keyframes float {
+      0%,100% { transform: translate(0,0) rotate(0deg); }
+      33%     { transform: translate(-50px,-30px) rotate(120deg); }
+      66%     { transform: translate(30px,-50px) rotate(240deg); }
+    }
+
+    /* Bouncing title + glitch */
+    .bouncing-text {
+      position: absolute;
+      font-size: clamp(2rem,10vw,4rem);
+      font-weight: bold;
+      color: #ff6b6b;
+      text-shadow:
+        0 0 10px currentColor,
+        0 0 20px currentColor,
+        0 0 30px currentColor;
+      user-select: none;
+      transition: all .1s ease;
+      z-index: 10;
+      letter-spacing: 2px;
+    }
+    .bouncing-text.glitch {
+      /* nothing extra here, pseudo-elements do the glitch */
+    }
+    .bouncing-text.glitch::before,
+    .bouncing-text.glitch::after {
+      content: attr(data-text);
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%;
+      opacity: 0.8;
+      clip: rect(0,0,0,0);
+    }
+    .bouncing-text.glitch::before {
+      left: 2px; text-shadow: -2px 0 cyan;
+      animation: glitch 2s infinite ease-in-out alternate-reverse;
+    }
+    .bouncing-text.glitch::after {
+      left: -2px; text-shadow: -2px 0 magenta;
+      animation: glitch 3s infinite ease-in-out alternate-reverse;
+    }
+    @keyframes glitch {
+      0%   { clip: rect(12px,9999px,85px,0);    transform: translate(-2px,-2px); }
+      10%  { clip: rect(33px,9999px,67px,0);    transform: translate(2px,2px); }
+      20%  { clip: rect(54px,9999px,40px,0);    transform: translate(-2px,2px); }
+      30%  { clip: rect(79px,9999px,56px,0);    transform: translate(2px,-2px); }
+      40%,100% { clip: rect(0,0,0,0);           transform: none; }
+    }
+
+    /* Corner flash effect */
+    .corner-hit {
+      animation: cornerFlash .5s ease-out;
+    }
+    @keyframes cornerFlash {
+      0% {
+        text-shadow:
+          0 0 20px currentColor,
+          0 0 40px currentColor,
+          0 0 60px currentColor,
+          0 0 80px currentColor;
+        transform: scale(1.1);
+      }
+      100% {
+        text-shadow:
+          0 0 10px currentColor,
+          0 0 20px currentColor,
+          0 0 30px currentColor;
+        transform: scale(1);
+      }
+    }
+
+    /* Info panel */
+    .info {
+      position: absolute;
+      bottom: 20px; left: 20px;
+      color: rgba(255,255,255,0.6);
+      font-size: .9rem;
+      z-index: 5;
+    }
+
+    /* CRT overlay */
+    .crt {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      background: repeating-linear-gradient(
+        0deg,
+        rgba(0,0,0,0) 0px,
+        rgba(0,0,0,0.05) 1px,
+        rgba(0,0,0,0) 2px
+      );
+      mix-blend-mode: overlay;
+      opacity: 0.6;
+      z-index: 20;
+    }
+  </style>
+</head>
+<body>
+  <div class="space-bg">
+    <div class="nebula"></div>
+    <div class="nebula"></div>
+    <div class="stars"></div>
+  </div>
+
+  <div
+    class="bouncing-text glitch"
+    id="bouncingText"
+    data-text="ceccato.ch"
+  >ceccato.ch</div>
+
+  <div class="info">
+    <div>Corner hits: <span id="cornerCount">0</span></div>
+    <div>Bounces: <span id="bounceCount">0</span></div>
+  </div>
+
+  <div class="crt"></div>
+
+  <script>
+
+    document.addEventListener('DOMContentLoaded', () => {
+      const host = window.location.hostname;                     // e.g. "ceccato.ch"
+      const text = document.getElementById('bouncingText');
+      text.textContent = host;
+      text.setAttribute('data-text', host);
+    });
+    
+    // Starfield radial setup
+    const starsContainer = document.querySelector('.stars');
+    const starData = [];
+    const numStars = 120;
+    let centerX = innerWidth / 2;
+    let centerY = innerHeight / 2;
+    for (let i = 0; i < numStars; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      const size = Math.random()*2+1;
+      star.style.width = size+'px';
+      star.style.height = size+'px';
+      starsContainer.append(star);
+      const angle = Math.random()*2*Math.PI;
+      const dist  = Math.random()*Math.max(centerX,centerY);
+      const speed = 2 + Math.random()*2;
+      starData.push({ el: star, angle, dist, speed });
+    }
+
+    // Bouncing text setup
+    const text = document.getElementById('bouncingText');
+    const cornerCountEl = document.getElementById('cornerCount');
+    const bounceCountEl = document.getElementById('bounceCount');
+    let x = Math.random()*(innerWidth-200);
+    let y = Math.random()*(innerHeight-100);
+    let vx = (Math.random()>0.5?1:-1)*(2+Math.random()*2);
+    let vy = (Math.random()>0.5?1:-1)*(2+Math.random()*2);
+    let cornerHits = 0;
+    let bounces = 0;
+    const colors = [
+      '#ff6b6b','#4ecdc4','#45b7d1','#96ceb4','#feca57',
+      '#ff9ff3','#54a0ff','#5f27cd','#00d2d3','#ff9f43',
+      '#10ac84','#ee5a24','#0abde3','#feca57','#c44569'
+    ];
+    let colorIdx = 0;
+    function getRandomColor(){
+      colorIdx = (colorIdx+1)%colors.length;
+      return colors[colorIdx];
+    }
+
+    function animate(){
+      // stars
+      starData.forEach(o=>{
+        o.dist += o.speed;
+        if (o.dist > Math.max(centerX,centerY)) {
+          o.dist = 0;
+          o.angle = Math.random()*2*Math.PI;
+        }
+        const sx = centerX + Math.cos(o.angle)*o.dist;
+        const sy = centerY + Math.sin(o.angle)*o.dist;
+        o.el.style.left = sx+'px';
+        o.el.style.top  = sy+'px';
+      });
+
+      // text bounce
+      const rect = text.getBoundingClientRect();
+      const w = rect.width, h = rect.height;
+      x += vx; y += vy;
+      let bounced = false, corner = false;
+
+      if (x<=0 || x>=innerWidth - w) {
+        vx = -vx;
+        x = Math.max(0,Math.min(innerWidth-w,x));
+        bounced = true;
+        if (y<=0||y>=innerHeight-h) corner = true;
+      }
+      if (y<=0 || y>=innerHeight - h) {
+        vy = -vy;
+        y = Math.max(0,Math.min(innerHeight-h,y));
+        bounced = true;
+        if (x<=0||x>=innerWidth-w) corner = true;
+      }
+
+      if (bounced) {
+        text.style.color = getRandomColor();
+        bounces++; bounceCountEl.textContent = bounces;
+        if (corner) {
+          cornerHits++; cornerCountEl.textContent = cornerHits;
+          text.classList.add('corner-hit');
+          setTimeout(()=> text.classList.remove('corner-hit'), 500);
+        }
+      }
+
+      text.style.left = x+'px';
+      text.style.top  = y+'px';
+      requestAnimationFrame(animate);
+    }
+
+    window.addEventListener('resize',()=>{
+      centerX = innerWidth/2;
+      centerY = innerHeight/2;
+      const r = text.getBoundingClientRect();
+      x = Math.min(x, innerWidth - r.width);
+      y = Math.min(y, innerHeight - r.height);
+    });
+
+    animate();
+
+    // Mouse & device parallax
+    window.addEventListener('mousemove', e => {
+      const mx = (e.clientX - centerX) / centerX;
+      const my = (e.clientY - centerY) / centerY;
+      document.querySelector('.space-bg')
+        .style.transform = `translate(${mx*10}px,${my*10}px)`;
+    });
+    if (window.DeviceOrientationEvent) {
+      window.addEventListener('deviceorientation', e => {
+        const tiltX = e.gamma || 0;
+        const tiltY = e.beta  || 0;
+        document.querySelector('.space-bg')
+          .style.transform = `translate(${tiltX/30}px,${tiltY/30}px)`;
+      });
+    }
+  </script>
+</body>
+</html>
